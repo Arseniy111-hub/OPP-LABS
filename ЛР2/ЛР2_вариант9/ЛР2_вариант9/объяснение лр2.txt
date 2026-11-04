@@ -1,0 +1,121 @@
+class TextFile {                                   // класс «Текстовый файл»
+private:                                           // поля видны только внутри класса
+    char* fileName;                                // имя файла
+    FILE* file;                                    // открытый файл (NULL — не открылся)
+    char* line;                                    // буфер для очередной строки
+
+public:                                            // методы доступны из main
+    TextFile() {                                   // конструктор
+        fileName = (char*)malloc(256 * sizeof(char));  // память под имя: 255 символов + '\0'
+        line = (char*)malloc(257 * sizeof(char));      // память под строку: 255 + '\n' + '\0'
+
+        fileName[0] = '\0';                        // имя пустое, если ввод не удастся
+        fgets(fileName, 256, stdin);               // читаем имя с клавиатуры
+
+        char* newLine = strchr(fileName, '\n');    // ищем '\n' в конце имени
+        if (newLine != NULL) {                     // если нашли
+            *newLine = '\0';                       // обрезаем строку на этом месте
+        }
+
+        file = fopen(fileName, "r");               // открываем файл на чтение (или NULL)
+    }
+
+    ~TextFile() {                                  // деструктор
+        if (file != NULL) {                        // если файл открыт
+            fclose(file);                          // закрываем его
+            file = NULL;                           // и обнуляем указатель
+        }
+        if (line != NULL) {                        // если буфер есть
+            free(line);                            // освобождаем его
+            line = NULL;
+        }
+        if (fileName != NULL) {                    // если имя есть
+            free(fileName);                        // освобождаем его
+            fileName = NULL;
+        }
+    }
+
+    bool IsOpen() const {                          // проверка открытия
+        return file != NULL;                       // true — файл открыт
+    }
+
+    char* ReadLine() {                             // чтение очередной строки
+        if (fgets(line, 257, file) == NULL) {      // читаем строку в буфер
+            return NULL;                           // строки кончились
+        }
+
+        char* newLine = strchr(line, '\n');        // ищем '\n' в конце строки
+        if (newLine != NULL) {                     // если нашли
+            *newLine = '\0';                       // обрезаем, чтобы не входил в длину
+        }
+        return line;                               // отдаём прочитанную строку
+    }
+};
+
+
+class RecordArray {                                // класс «Массив записей»
+private:
+    LineRecord* records;                           // динамический массив записей
+    int recordCount;                               // сколько записей в массиве
+
+public:
+    RecordArray(TextFile& textFile) {              // конструктор по файлу
+        records = NULL;                            // массив пока пустой
+        recordCount = 0;                           // записей 0
+
+        char* line = textFile.ReadLine();          // читаем первую строку
+        while (line != NULL) {                     // пока строки есть
+            LineRecord newRecord;                  // запись для этой строки
+            newRecord.length = (int)strlen(line);  // её длина
+            newRecord.count = 1;                   // пока одна такая строка
+
+            unsigned int number = (unsigned int)recordCount;          // число записей для _lfind
+            LineRecord* found = (LineRecord*)_lfind(&newRecord, records,
+                &number, sizeof(LineRecord), CompareByLength);       // ищем запись с той же длиной
+
+            if (found != NULL) {                   // нашли
+                found->count++;                    // +1 строка такой длины
+            }
+            else {                                 // не нашли
+                records = (LineRecord*)realloc(records,
+                    (recordCount + 1) * sizeof(LineRecord));         // расширяем массив на 1
+                records[recordCount] = newRecord;  // кладём новую запись в конец
+                recordCount++;                     // записей стало на одну больше
+            }
+
+            line = textFile.ReadLine();            // читаем следующую строку
+        }
+    }
+
+    RecordArray(LineRecord* recordSet, int count) { // конструктор по набору
+        recordCount = count;                       // запоминаем количество
+        records = (LineRecord*)malloc(recordCount * sizeof(LineRecord));  // память под записи
+        for (int i = 0; i < recordCount; i++) {    // для каждой записи
+            records[i] = recordSet[i];             // копируем её к себе
+        }
+    }
+
+    ~RecordArray() {                               // деструктор
+        if (records != NULL) {                     // если массив есть
+            free(records);                         // освобождаем
+            records = NULL;                        // обнуляем указатель
+        }
+    }
+
+    LineRecord* GetRecordSetCopy(int& count) const {  // получение копии набора
+        count = recordCount;                       // отдаём количество через ссылку
+        LineRecord* copy =
+            (LineRecord*)malloc(recordCount * sizeof(LineRecord));  // память под копию
+        for (int i = 0; i < recordCount; i++) {    // для каждой записи
+            copy[i] = records[i];                  // копируем
+        }
+        return copy;                               // отдаём копию (освобождает main)
+    }
+
+    void Display() const {                         // вывод на экран
+        puts("Длина строки | Количество строк");   // заголовок таблицы
+        for (int i = 0; i < recordCount; i++) {    // для каждой записи
+            printf("%12d | %d\n", records[i].length, records[i].count);  // строка таблицы
+        }
+    }
+};
