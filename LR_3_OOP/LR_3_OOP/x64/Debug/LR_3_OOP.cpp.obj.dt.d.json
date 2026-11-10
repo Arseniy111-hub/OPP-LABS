@@ -1,7 +1,7 @@
 {
     "Version": "1.2",
     "Data": {
-        "Source": "d:\\ооп лабы\\lr_3_oop\\lr_3_oop\\lr_3_oop.cpp",
+        "Source": "d:\\oop_labs\\lr_3_oop\\lr_3_oop\\lr_3_oop.cpp",
         "ProvidedModule": "",
         "Includes": [
             "c:\\program files\\microsoft visual studio\\18\\community\\vc\\tools\\msvc\\14.51.36231\\include\\cstdio",
