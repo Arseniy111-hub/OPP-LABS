@@ -50,7 +50,7 @@ public:
     TextFile(const char* name) {
         strcpy(fileName, name);
 
-        file = fopen(fileName, "r");
+        file = fopen(fileName, "rt");
         if (file == NULL) {
             printf("Ошибка: не удалось открыть файл %s\n", fileName);
             exit(1);
