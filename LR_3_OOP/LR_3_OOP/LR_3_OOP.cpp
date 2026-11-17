@@ -93,8 +93,8 @@ public:
         strcpy(fileName, name);
         recordCount = 0;
 
-        // запись в двоичный файл
-        file = fopen(fileName, "wb");
+        // создание двоичного файла для записи и чтения
+        file = fopen(fileName, "w+b");
         if (file == NULL) {
             printf("Ошибка: не удалось создать файл %s\n", fileName);
             exit(1);
@@ -110,14 +110,9 @@ public:
             }
             line = textFile.ReadLine();
         }
-        fclose(file);
 
-        // открытие для чтения
-        file = fopen(fileName, "rb");
-        if (file == NULL) {
-            printf("Ошибка: не удалось открыть файл %s\n", fileName);
-            exit(1);
-        }
+        // переход в начало файла для чтения
+        fseek(file, 0, SEEK_SET);
     }
 
     // аннулирование_файла (деструктор)
@@ -167,23 +162,20 @@ public:
         indexCount = count;
         indices = NULL;
 
-        // запись позиций в индексный файл
-        file = fopen(fileName, "wb");
+        // создание индексного файла для записи и чтения
+        file = fopen(fileName, "w+b");
         if (file == NULL) {
             printf("Ошибка: не удалось создать файл %s\n", fileName);
             exit(1);
         }
+
+        // запись позиций в индексный файл
         for (int i = 0; i < indexCount; i++) {
             fwrite(&recordSet[i].position, sizeof(long), 1, file);
         }
-        fclose(file);
 
-        // открытие для чтения
-        file = fopen(fileName, "rb");
-        if (file == NULL) {
-            printf("Ошибка: не удалось открыть файл %s\n", fileName);
-            exit(1);
-        }
+        // переход в начало файла для чтения
+        fseek(file, 0, SEEK_SET);
     }
 
     // аннулирование_файла (деструктор)
