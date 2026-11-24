@@ -1,0 +1,364 @@
+ФЕДЕРАЛЬНОЕ ГОСУДАРСТВЕННОЕ АВТОНОМНОЕ ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ «САМАРСКИЙ НАЦИОНАЛЬНЫЙ ИССЛЕДОВАТЕЛЬСКИЙ УНИВЕРСИТЕТ ИМЕНИ АКАДЕМИКА С.П. КОРОЛЕВА
+(САМАРСКИЙ УНИВЕРСИТЕТ)»
+Институт 	Информатики и кибернетики
+Кафедра 	 Программных систем
+ОТЧЁТ
+по лабораторной работе № 3
+по дисциплине «Объектно-ориентированное программирование»
+Выполнил 	Достовалов А.С., 6301-020302D ФИИТ
+Проверил	Баландин Александр Васильевич
+Самара
+2026
+ЗАДАНИЕ
+ВАРИАНТ № 9.
+Написать программу, которая поддерживает индексированный доступ к файлу, содержащему записи структуры вида: struct {unsigned kard; //номер зачетной книжки; char name[21]; //фамилия студента}. Программа должна обеспечивать выполнение следующих функций: 1) формирование файла записей и создание по его завершению двух индексных файлов, в первом индексы располагаются в порядке возрастания поля kard соответствующих записей, а во втором – в порядке лексикографического возрастания поля name соответствующих записей (для упорядочения индексов использовать функцию в стиле языка С qsort); 2) нахождение и вывод на экран фамилии студента по заданному номеру зачетной книжки (использовать функцию bsearch двоичного поиска в стиле языка С); 3) вывод на экран упорядоченного по алфавиту списка всех фамилий студентов.
+1 Объектно-ориентированный анализ
+1.1 Текстовый файл с последовательным доступом для чтения строк (тип сущность)
+Свойства:
+имя_файла;
+поток_чтения_файла;
+буфер_ввода_строки.
+Процедуры:
+создание_файла_для_чтения_по_заданному_имени;
+чтение_строки;
+аннулирование_файла.
+1.2 Двоичный файл записей о студентах с прямым доступом для записи и чтения (тип сущность)
+Свойства:
+имя_файла;
+поток_файла.
+Процедуры:
+создание_файла_по_текстовому_файлу;
+получение_копии_набора_записей_с_позициями;
+чтение_записи_по_позиции;
+аннулирование_файла.
+1.3 Двоичный файл индексов с последовательным доступом для записи и чтения (тип сущность)
+Свойства:
+имя_файла;
+поток_файла;
+упорядоченный_набор_индексов.
+Процедуры:
+создание_файла_по_упорядоченному_набору_записей;
+чтение_упорядоченного_набора_индексов;
+поиск_фамилии_по_номеру_зачётной_книжки;
+вывод_фамилий_в_порядке_индексов;
+аннулирование_файла.
+2 Объектно-ориентированное проектирование
+2.1 Текстовый файл
+Свойства:
+имя_файла — массив символов;
+поток_чтения_файла — указатель на файл;
+буфер_ввода_строки — массив символов.
+Процедуры:
+создание_файла_для_чтения_по_заданному_имени — конструктор с параметром (имя файла);
+чтение_строки — метод;
+аннулирование_файла — деструктор.
+2.2 Двоичный файл записей
+Свойства:
+имя_файла — массив символов;
+поток_файла — указатель на файл;
+количество_записей — целое число.
+Процедуры:
+создание_файла_по_текстовому_файлу — конструктор с параметрами (имя файла, ссылка на текстовый файл);
+получение_копии_набора_записей_с_позициями — метод;
+чтение_записи_по_позиции — метод;
+аннулирование_файла — деструктор.
+2.3 Индексный файл
+Свойства:
+имя_файла — массив символов;
+поток_файла — указатель на файл;
+упорядоченный_набор_индексов — динамический массив позиций записей;
+количество_индексов — целое число.
+Процедуры:
+создание_файла_по_упорядоченному_набору_записей — конструктор с параметрами (имя файла, набор записей с позициями, количество записей);
+чтение_упорядоченного_набора_индексов — метод;
+поиск_фамилии_по_номеру_зачётной_книжки — метод;
+вывод_фамилий_в_порядке_индексов — метод;
+аннулирование_файла — деструктор.
+3 Объектно-ориентированное программирование
+создать Текстовый_файл по заданному имени;
+создать Двоичный_файл_записей по Текстовому_файлу;
+получить копию набора записей с позициями Двоичного_файла_записей;
+упорядочить копию набора записей по возрастанию номеров зачётных книжек функцией qsort и создать Индексный_файл_по_номеру по упорядоченному набору записей;
+упорядочить копию набора записей по фамилиям функцией qsort и создать Индексный_файл_по_фамилии по упорядоченному набору записей;
+вывести меню и получить выбранный пункт;
+если выбран поиск, ввести номер зачётной книжки и выполнить поиск фамилии в Индексном_файле_по_номеру;
+если выбран вывод списка, вывести фамилии в порядке индексов Индексного_файла_по_фамилии;
+повторять шаги 6–8, пока не выбран выход;
+завершить выполнение.
+4 Код исполнительной программы
+#define _CRT_SECURE_NO_WARNINGS
+#include <cstdio>    // fopen, fclose, fgets, fread, fwrite, fseek, ftell
+#include <cstdlib>   // malloc, free, qsort, bsearch, exit
+#include <cstring>   // strcpy, strchr, strcmp
+// Запись <номер_зачётной_книжки, фамилия_студента>
+struct StudentRecord {
+unsigned kard;   // номер_зачётной_книжки
+char name[21];   // фамилия_студента
+};
+// Запись с позицией в двоичном файле
+struct PositionRecord {
+long position;           // позиция_записи
+StudentRecord student;   // запись
+};
+// Сравнение записей по номеру зачётной книжки (для qsort и bsearch)
+int CompareByKard(const void* first, const void* second) {
+const PositionRecord* firstRecord = (const PositionRecord*)first;
+const PositionRecord* secondRecord = (const PositionRecord*)second;
+if (firstRecord->student.kard < secondRecord->student.kard) {
+return -1;
+}
+if (firstRecord->student.kard > secondRecord->student.kard) {
+return 1;
+}
+return 0;
+}
+// Сравнение записей по фамилии (для qsort)
+int CompareByName(const void* first, const void* second) {
+const PositionRecord* firstRecord = (const PositionRecord*)first;
+const PositionRecord* secondRecord = (const PositionRecord*)second;
+return strcmp(firstRecord->student.name, secondRecord->student.name);
+}
+// Класс 1: ТЕКСТОВЫЙ ФАЙЛ
+class TextFile {
+private:
+char fileName[256];   // имя_файла
+FILE* file;           // поток_чтения_файла
+char line[256];       // буфер_ввода_строки
+public:
+// создание_файла_для_чтения_по_заданному_имени (конструктор)
+TextFile(const char* name) {
+strcpy(fileName, name);
+file = fopen(fileName, "rt");
+if (file == NULL) {
+printf("Ошибка: не удалось открыть файл %s\n", fileName);
+exit(1);
+}
+}
+// аннулирование_файла (деструктор)
+~TextFile() {
+if (file != NULL) {
+fclose(file);
+file = NULL;
+}
+}
+// чтение_строки
+char* ReadLine() {
+if (fgets(line, 256, file) == NULL) {
+return NULL;
+}
+// удаление '\n' в конце строки
+char* newLine = strchr(line, '\n');
+if (newLine != NULL) {
+*newLine = '\0';
+}
+return line;
+}
+};
+// Класс 2: ДВОИЧНЫЙ ФАЙЛ ЗАПИСЕЙ
+class RecordFile {
+private:
+char fileName[256];   // имя_файла
+FILE* file;           // поток_файла
+int recordCount;      // количество_записей
+public:
+// создание_файла_по_текстовому_файлу (конструктор)
+RecordFile(const char* name, TextFile& textFile) {
+strcpy(fileName, name);
+recordCount = 0;
+// создание двоичного файла для записи и чтения
+file = fopen(fileName, "w+b");
+if (file == NULL) {
+printf("Ошибка: не удалось создать файл %s\n", fileName);
+exit(1);
+}
+char* line = textFile.ReadLine();
+while (line != NULL) {
+// разбор строки «номер фамилия»
+StudentRecord student;
+if (sscanf(line, "%u %20s", &student.kard, student.name) == 2) {
+fwrite(&student, sizeof(StudentRecord), 1, file);
+recordCount++;
+}
+line = textFile.ReadLine();
+}
+// переход в начало файла для чтения
+fseek(file, 0, SEEK_SET);
+}
+// аннулирование_файла (деструктор)
+~RecordFile() {
+if (file != NULL) {
+fclose(file);
+file = NULL;
+}
+}
+// получение_копии_набора_записей_с_позициями
+PositionRecord* GetRecordSetCopy(int& count) {
+count = recordCount;
+PositionRecord* copy =
+(PositionRecord*)malloc(recordCount * sizeof(PositionRecord));
+// чтение записей с начала файла
+fseek(file, 0, SEEK_SET);
+for (int i = 0; i < recordCount; i++) {
+copy[i].position = ftell(file);
+fread(&copy[i].student, sizeof(StudentRecord), 1, file);
+}
+return copy;
+}
+// чтение_записи_по_позиции
+StudentRecord ReadRecord(long position) {
+StudentRecord student;
+fseek(file, position, SEEK_SET);
+fread(&student, sizeof(StudentRecord), 1, file);
+return student;
+}
+};
+// Класс 3: ИНДЕКСНЫЙ ФАЙЛ
+class IndexFile {
+private:
+char fileName[256];   // имя_файла
+FILE* file;           // поток_файла
+long* indices;        // упорядоченный_набор_индексов
+int indexCount;       // количество_индексов
+public:
+// создание_файла_по_упорядоченному_набору_записей (конструктор)
+IndexFile(const char* name, PositionRecord* recordSet, int count) {
+strcpy(fileName, name);
+indexCount = count;
+indices = NULL;
+// создание индексного файла для записи и чтения
+file = fopen(fileName, "w+b");
+if (file == NULL) {
+printf("Ошибка: не удалось создать файл %s\n", fileName);
+exit(1);
+}
+// запись позиций в индексный файл
+for (int i = 0; i < indexCount; i++) {
+fwrite(&recordSet[i].position, sizeof(long), 1, file);
+}
+// переход в начало файла для чтения
+fseek(file, 0, SEEK_SET);
+}
+// аннулирование_файла (деструктор)
+~IndexFile() {
+if (file != NULL) {
+fclose(file);
+file = NULL;
+}
+if (indices != NULL) {
+free(indices);
+indices = NULL;
+}
+}
+// чтение_упорядоченного_набора_индексов
+void ReadIndices() {
+if (indices == NULL) {
+indices = (long*)malloc(indexCount * sizeof(long));
+}
+fseek(file, 0, SEEK_SET);
+fread(indices, sizeof(long), indexCount, file);
+}
+// поиск_фамилии_по_номеру_зачётной_книжки
+void FindNameByKard(RecordFile& recordFile, unsigned kard) {
+ReadIndices();
+// записи в порядке индексов
+PositionRecord* records =
+(PositionRecord*)malloc(indexCount * sizeof(PositionRecord));
+for (int i = 0; i < indexCount; i++) {
+records[i].position = indices[i];
+records[i].student = recordFile.ReadRecord(indices[i]);
+}
+// двоичный поиск по номеру
+PositionRecord key;
+key.position = 0;
+key.student.kard = kard;
+key.student.name[0] = '\0';
+PositionRecord* found = (PositionRecord*)bsearch(&key, records,
+indexCount, sizeof(PositionRecord), CompareByKard);
+if (found != NULL) {
+printf("Фамилия студента: %s\n", found->student.name);
+}
+else {
+puts("Студент с таким номером не найден.");
+}
+if (records != NULL) {
+free(records);
+records = NULL;
+}
+}
+// вывод_фамилий_в_порядке_индексов
+void PrintNames(RecordFile& recordFile) {
+ReadIndices();
+for (int i = 0; i < indexCount; i++) {
+StudentRecord student = recordFile.ReadRecord(indices[i]);
+printf("%d. %s\n", i + 1, student.name);
+}
+}
+};
+// Основная программа
+int main() {
+// 1. Создать Текстовый_файл по заданному имени.
+TextFile textFile("students.txt");
+// 2. Создать Двоичный_файл_записей по Текстовому_файлу.
+RecordFile recordFile("students.dat", textFile);
+// 3. Получить копию набора записей с позициями.
+int count = 0;
+PositionRecord* recordSet = recordFile.GetRecordSetCopy(count);
+// 4. Упорядочить копию по номеру зачётной книжки функцией qsort
+// и создать Индексный_файл_по_номеру.
+qsort(recordSet, count, sizeof(PositionRecord), CompareByKard);
+IndexFile kardIndexFile("kard.idx", recordSet, count);
+// 5. Упорядочить копию по фамилии функцией qsort
+// и создать Индексный_файл_по_фамилии.
+qsort(recordSet, count, sizeof(PositionRecord), CompareByName);
+IndexFile nameIndexFile("name.idx", recordSet, count);
+// освобождение копии набора записей
+if (recordSet != NULL) {
+free(recordSet);
+recordSet = NULL;
+}
+// 6. Меню.
+char input[32];
+int choice = -1;
+while (choice != 0) {
+puts("\n1 - найти фамилию по номеру зачётной книжки");
+puts("2 - вывести фамилии по алфавиту");
+puts("0 - выход");
+printf("Выберите пункт: ");
+if (fgets(input, 32, stdin) == NULL) {
+break;
+}
+if (sscanf(input, "%d", &choice) != 1) {
+choice = -1;
+}
+if (choice == 1) {
+// поиск по номеру
+unsigned kard = 0;
+printf("Введите номер зачётной книжки: ");
+if (fgets(input, 32, stdin) == NULL) {
+break;
+}
+if (sscanf(input, "%u", &kard) == 1) {
+kardIndexFile.FindNameByKard(recordFile, kard);
+}
+else {
+puts("Ошибка: номер должен быть числом.");
+}
+}
+else if (choice == 2) {
+// вывод по алфавиту
+puts("Фамилии студентов по алфавиту:");
+nameIndexFile.PrintNames(recordFile);
+}
+else if (choice != 0) {
+puts("Нет такого пункта меню.");
+}
+}
+// 7. Завершить выполнение.
+return 0;
+}
+5 Пример выполнения программы
+Содержимое исходного текстового файла students.txt приведено на рисунке 1, результат выполнения программы — на рисунке 2.
+Рисунок 1 – Содержимое файла students.txt в текстовом редакторе
+Рисунок 2 – Результат выполнения программы
+ВЫВОДЫ
+Выполнены объектно-ориентированный анализ и проектирование предметной области «индексированный доступ к файлу записей» для варианта 9. Выделены три сущности: текстовый файл, двоичный файл записей о студентах и двоичный файл индексов, которые реализованы классами TextFile, RecordFile и IndexFile. Записи читаются из текстового файла students.txt функцией fgets() и записываются в двоичный файл функцией fwrite(); индексом записи служит её позиция в двоичном файле, полученная функцией ftell(). Копия набора записей упорядочивается функцией qsort() по номерам зачётных книжек и по фамилиям, после чего позиции записываются в два индексных файла. Фамилия по номеру зачётной книжки находится функцией bsearch(), записи по индексам читаются функциями fseek() и fread(). Двоичный файл записей и индексные файлы открываются один раз для записи и чтения, после записи выполняется переход в начало файла функцией fseek(). Номера зачётных книжек считаются уникальными, фамилия занимает не более 20 байт. Использованы функции fopen(), fclose(), fgets(), fread(), fwrite(), fseek(), ftell(), sscanf(), printf(), puts(), qsort(), bsearch(), strcpy(), strchr(), strcmp(), malloc(), free() и exit().
